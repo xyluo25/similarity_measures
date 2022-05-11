@@ -97,10 +97,7 @@ def is_simple_quad(ab, bc, cd, da):
     #   Because they don't necessarily need to lie in the same 'Z' direction
     if sum(crossTF) <= 1:
         crossTF = cross <= 0
-    if sum(crossTF) > 2:
-        return True
-    else:
-        return False
+    return sum(crossTF) > 2
 
 
 def makeQuad(x, y):
@@ -153,21 +150,19 @@ def makeQuad(x, y):
 
         isQuad = is_simple_quad(AB, BC, CD, DA)
 
-        if isQuad is False:
-            # place the second and first points back where they were, and
-            # swap the second and third points
-            x[2], x[0], x[1] = x[0], x[1], x[2]
-            y[2], y[0], y[1] = y[0], y[1], y[2]
-            AB = [x[1]-x[0], y[1]-y[0]]
-            BC = [x[2]-x[1], y[2]-y[1]]
-            CD = [x[3]-x[2], y[3]-y[2]]
-            DA = [x[0]-x[3], y[0]-y[3]]
+    if isQuad is False:
+        # place the second and first points back where they were, and
+        # swap the second and third points
+        x[2], x[0], x[1] = x[0], x[1], x[2]
+        y[2], y[0], y[1] = y[0], y[1], y[2]
+        AB = [x[1]-x[0], y[1]-y[0]]
+        BC = [x[2]-x[1], y[2]-y[1]]
+        CD = [x[3]-x[2], y[3]-y[2]]
+        DA = [x[0]-x[3], y[0]-y[3]]
 
-            isQuad = is_simple_quad(AB, BC, CD, DA)
+        isQuad = is_simple_quad(AB, BC, CD, DA)
 
-    # calculate the area via shoelace formula
-    area = poly_area(x, y)
-    return area
+    return poly_area(x, y)
 
 
 def get_arc_length(dataset):
@@ -276,18 +271,26 @@ def area_between_two_curves(exp_data, num_data):
     # let's find the largest gap between point the num_data, and then
     # linearally interpolate between these points such that the num_data
     # becomes the same length as the exp_data
-    for i in range(0, n_exp-n_num):
+    for _ in range(n_exp-n_num):
         a = num_data[0:n_num-1, 0]
         b = num_data[1:n_num, 0]
         nIndex = np.argmax(arcsnum_data)
         newX = (b[nIndex] + a[nIndex])/2.0
         #   the interpolation model messes up if x2 < x1 so we do a quick check
-        if a[nIndex] < b[nIndex]:
-            newY = np.interp(newX, [a[nIndex], b[nIndex]],
-                             [num_data[nIndex, 1], num_data[nIndex+1, 1]])
-        else:
-            newY = np.interp(newX, [b[nIndex], a[nIndex]],
-                             [num_data[nIndex+1, 1], num_data[nIndex, 1]])
+        newY = (
+            np.interp(
+                newX,
+                [a[nIndex], b[nIndex]],
+                [num_data[nIndex, 1], num_data[nIndex + 1, 1]],
+            )
+            if a[nIndex] < b[nIndex]
+            else np.interp(
+                newX,
+                [b[nIndex], a[nIndex]],
+                [num_data[nIndex + 1, 1], num_data[nIndex, 1]],
+            )
+        )
+
         num_data = np.insert(num_data, nIndex+1, newX, axis=0)
         num_data[nIndex+1, 1] = newY
 
@@ -349,7 +352,7 @@ def get_length(x, y):
     le[0] = 0.0
     l_sum = np.zeros(n)
     l_sum[0] = 0.0
-    for i in range(0, n-1):
+    for i in range(n-1):
         le[i+1] = np.sqrt((((x[i+1]-x[i])/xmax)**2)+(((y[i+1]-y[i])/ymax)**2))
         l_sum[i+1] = l_sum[i]+le[i+1]
     return le, np.sum(le), l_sum
@@ -418,7 +421,7 @@ def curve_length_measure(exp_data, num_data):
     n = len(x_e)
 
     r_sq = np.zeros(n)
-    for i in range(0, n):
+    for i in range(n):
         lieq = le_sum[i]*(lc_nj/le_nj)
         xtemp = np.interp(lieq, lc_sum, x_c)
         ytemp = np.interp(lieq, lc_sum, y_c)
@@ -854,13 +857,10 @@ def dtw_path(d):
     >>> plt.show()
 
     """
-    path = []
     i, j = d.shape
     i = i - 1
     j = j - 1
-    # back propagation starts from the last point,
-    # and ends at d[0, 0]
-    path.append((i, j))
+    path = [(i, j)]
     while i > 0 or j > 0:
         if i == 0:
             j = j - 1
